@@ -1,20 +1,17 @@
 import 'package:flutter/material.dart';
 import 'database_helper.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 DatabaseHelper ddb = DatabaseHelper();
 
 const String constTitulo = 'Hugo Jr - Cifras';
+String constDownloadDir = "/storage/emulated/0";
 
 const String constHTML = """
         <style>
-           b { color: red; font-weight: bold; font-size: 40px;}
-           h1{
-                font-size: 40px;
-            }
-            pre {
-                line-height: 1.6;
-                font-size: 40px;
-            }
+           b   { color: red; font-weight: bold; font-size: 40px;}
+           h1  { font-size: 40px; }
+           pre { line-height: 1.6; font-size: 40px; }
         </style>
         <script>
                var i_letra=0;
@@ -112,51 +109,28 @@ const String constHTML = """
                       e.style.visibility = i_letra == 0 ? '' : 'hidden';
                   });              
               }       
-
-              function fyt(tt) {
-                i_yt = 1 - i_yt;
-
-                if ( i_yt == 0 )
-                  document.all.yt.innerHTML = '';
-                else
-                {  
-                  if (tt.length == 0)
-                    document.all.yt.innerHTML = '';
-                  else  
-                    document.all.yt.innerHTML = '<center><iframe src="https://www.youtube.com/embed/' + tt + '" width=1200 height=800 frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></center>';
-                }
-              }       
         </script>
-        <div id=yt></div>
+
         <br><h1>Tom: <b id=tom_atual>#TOM#</b></h1> 
         <div>
           #CIFRA#
         </div>
 """;
 
+void launchURL(String urlString) async {
+  final Uri url = Uri.parse(urlString);
+  await launchUrl(url, mode: LaunchMode.externalApplication);
+}
+
 showAlertDialog(BuildContext context, String title, String message) {
-  // set up the button
-  Widget okButton = TextButton(
-    child: const Text("OK"),
-    onPressed: () {
-      Navigator.of(context).pop();
-    },
-  );
-
-  // set up the AlertDialog
-  AlertDialog alert = AlertDialog(
-    title: Text(title),
+  final snackBar = SnackBar(
     content: Text(message),
-    actions: [
-      okButton,
-    ],
+    action: SnackBarAction(
+      label: 'Close',
+      onPressed: () {
+        // Ação da SnackBar
+      },
+    ),
   );
-
-  // show the dialog
-  showDialog(
-    context: context,
-    builder: (BuildContext context) {
-      return alert;
-    },
-  );
+  ScaffoldMessenger.of(context).showSnackBar(snackBar);
 }

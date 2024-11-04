@@ -1,14 +1,16 @@
+import 'package:path_provider/path_provider.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:h_cifras/constantes.dart';
 import 'package:sqflite/sqflite.dart' as sql;
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
-
 
 class Musica {
   late int id;
   late String titulo;
   late String tom;
   late String cifra;
-  late String fav_tom;
+  late String favtom;
   late String yt;
 }
 
@@ -19,13 +21,18 @@ class DatabaseHelper {
   List<Musica> listaFiltrada = [];
 
   DatabaseHelper() {
+    WidgetsFlutterBinding.ensureInitialized();
+
     sqfliteFfiInit();
-    try {
-      sql.openDatabase('/storage/emulated/0/Download/hcifras.db',
+    getDownloadsDirectory().then((onValue) {
+      constDownloadDir = onValue == null ? "" : onValue.path;
+      sql.openDatabase('$constDownloadDir/hcifras.db',
           version: 1, onCreate: dbOnCreate, onOpen: dbOnOpen);
       oppened = true;
-    } catch (e) {
-    }
+      if (kDebugMode) {
+        print(constDownloadDir);
+      }
+    });
   }
 
   void dbOnCreate(sql.Database database, int version) {
@@ -61,7 +68,7 @@ class DatabaseHelper {
     if (query.contains("...")) {
       q = "select * from items where fav_tom is not null";
     } else {
-      if ( query.length < 3 ) {
+      if (query.length < 3) {
         return true;
       }
       q = "select * from items where 1=1";
@@ -69,20 +76,21 @@ class DatabaseHelper {
         q = "$q and titulo like '%$s%'";
       }
     } //youtubeId: 'ePdRgBWhvog',
-    
-    await db.rawQuery(q).then( (onValue) {
-      for (int i=0; i < onValue.length; i++) {
+
+    await db.rawQuery(q).then((onValue) {
+      for (int i = 0; i < onValue.length; i++) {
         Musica m = Musica();
         m.id = onValue[i]['id'] as int;
         m.titulo = onValue[i]['titulo'] as String;
         m.tom = onValue[i]['tom'] as String;
         m.cifra = onValue[i]['cifra'] as String;
-        m.fav_tom = onValue[i]['fav_tom'] == null ? "" : (onValue[i]['fav_tom'] as String);
+        m.favtom = onValue[i]['fav_tom'] == null
+            ? ""
+            : (onValue[i]['fav_tom'] as String);
         m.yt = onValue[i]['yt'] == null ? "" : (onValue[i]['yt'] as String);
 
-        listaFiltrada.add( m );
+        listaFiltrada.add(m);
       }
-        print(listaFiltrada.length);
     });
     return true;
   }
@@ -98,16 +106,18 @@ class DatabaseHelper {
   String getTom(index) {
     return listaFiltrada[index].tom;
   }
+
   String getCifra(index) {
     return listaFiltrada[index].cifra;
   }
+
   String getFavTom(index) {
-    return listaFiltrada[index].fav_tom;
+    return listaFiltrada[index].favtom;
   }
 
   String getYt(index) {
     return listaFiltrada[index].yt;
-  }  
+  }
 
   void addToFavorite(int index, String newFavTom) {
     final int id = getId(index);
@@ -116,6 +126,6 @@ class DatabaseHelper {
     } else {
       db.rawUpdate("update items set fav_tom=? where id=?", [newFavTom, id]);
     }
-    listaFiltrada[index].fav_tom = newFavTom;
+    listaFiltrada[index].favtom = newFavTom;
   }
 }

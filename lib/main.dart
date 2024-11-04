@@ -1,9 +1,10 @@
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'constantes.dart';
-import 'Navegador.dart';
-import 'package:flutter_downloader/flutter_downloader.dart';
 import 'dart:io';
+
+import 'package:flutter/material.dart';
+import 'constantes.dart';
+import 'cifra.dart';
+import 'package:dio/dio.dart';
+import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 
 void main() {
   runApp(const MyApp());
@@ -21,6 +22,11 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
+      darkTheme: ThemeData(
+        brightness: Brightness.dark, // Tema escuro
+        primarySwatch: Colors.blue,
+      ),
+      themeMode: ThemeMode.system,
       home: const SearchScreenStateModel(),
     );
   }
@@ -40,6 +46,7 @@ class SearchScreenStateModel extends StatefulWidget {
 class SearchScreen extends State<SearchScreenStateModel> {
   bool isFiltered = false;
   bool hasInitialized = false;
+  String s_download = "";
 
   late TextEditingController myController = TextEditingController();
 
@@ -60,28 +67,30 @@ class SearchScreen extends State<SearchScreenStateModel> {
   }
 
   void download() async {
-    final file = File('/storage/emulated/0/Download/hcifras.db');
-
+    final file = File('$constDownloadDir/hcifras.db');
     if (await file.exists()) {
       await file.delete();
     }
-    
-    if (!hasInitialized) {
-      await FlutterDownloader.initialize(
-        debug: true, // Coloque como 'false' para remover logs em produção
-        ignoreSsl:
-            true, // Use true se estiver lidando com URLs sem SSL adequados
-      );
-      hasInitialized = true;
-    }
 
-    await FlutterDownloader.enqueue(
-      url: 'http://200.98.168.231:8585/hcifras/hcifras.db',
-      savedDir: '/storage/emulated/0/Download/',
-      showNotification: true,
-      openFileFromNotification: false,
+    isFiltered = false;
+    await ddb.doFilter("");
+
+    Dio dio = Dio();
+
+    await dio.download(
+      'http://200.98.168.231:8585/hcifras/hcifras.db',
+      '$constDownloadDir/hcifras.db',
+      onReceiveProgress: (received, total) {
+        if (total != -1) {
+          setState(() {
+            s_download = "${(received / total * 100).toStringAsFixed(0)}%";
+          });
+        }
+      },
     );
-    
+    setState(() {
+      s_download = 'Download completed... Restart APP to apply.';
+    });
   }
 
   void search(String query) async {
@@ -105,7 +114,7 @@ class SearchScreen extends State<SearchScreenStateModel> {
   void itemBuilderOnTap(index) {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => NavegadorStateModel(index)),
+      MaterialPageRoute(builder: (context) => CifraStateModel(index)),
     );
   }
   //
@@ -127,38 +136,49 @@ class SearchScreen extends State<SearchScreenStateModel> {
             ),
           ),
         ),
-        //------------
-        floatingActionButton: Column(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              FloatingActionButton(
-                onPressed: () {
+        //-----------------------------------------------------
+        //---
+        floatingActionButton: SpeedDial(
+          //closeManually: true,
+          animatedIcon: AnimatedIcons.menu_close,
+          animatedIconTheme: const IconThemeData(size: 22.0),
+          curve: Curves.bounceIn,
+          overlayColor: Colors.black,
+          overlayOpacity: 0.5,
+          backgroundColor: Colors.white,
+          foregroundColor: Colors.black,
+          elevation: 8.0,
+          shape: const CircleBorder(),
+          children: [
+            SpeedDialChild(
+                child: const Icon(Icons.playlist_play_sharp),
+                backgroundColor: Colors.red,
+                onTap: () {
                   download();
-
-                  showAlertDialog(context, "Mensagem",
-                      "O Aplicativo sera finalizado para ser atualizado...");
-
-                  Future.delayed(const Duration(seconds: 3), () {
-                    SystemNavigator.pop();
-                  });
-                },
+                }),
+            SpeedDialChild(
                 child: const Icon(Icons.download),
-              ),
-              const SizedBox(height: 8),
-              FloatingActionButton(
-                onPressed: () {
-                  search("...");
-                },
+                backgroundColor: Colors.red,
+                onTap: () {
+                  download();
+                }),
+            SpeedDialChild(
                 child: Icon(isFiltered ? Icons.favorite : Icons.list),
-              ),
-            ]),
-        //-----------
+                backgroundColor: Colors.blue,
+                onTap: () {
+                  search("...");
+                }),
+          ],
+        ),
+
+        //---
+        //-----------------------------------------------------
+
         body: ddb.listaFiltrada.isEmpty
-            ? const Center(
+            ? Center(
                 child: Text(
-                  'No Results Found',
-                  style: TextStyle(fontSize: 18),
+                  s_download,
+                  style: const TextStyle(fontSize: 18),
                 ),
               )
             : ListView.separated(

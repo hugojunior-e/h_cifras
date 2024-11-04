@@ -6,26 +6,38 @@ import 'constantes.dart';
 import 'package:web_browser/web_browser.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 
-class NavegadorStateModel extends StatefulWidget {
+class CifraStateModel extends StatefulWidget {
   final int index;
 
-  const NavegadorStateModel(this.index, {super.key});
+  const CifraStateModel(this.index, {super.key});
 
   @override
   // ignore: no_logic_in_create_state
-  State<NavegadorStateModel> createState() => Navegador(index);
+  State<CifraStateModel> createState() => Cifra(index);
 }
 
 // ignore: must_be_immutable
-class Navegador extends State<NavegadorStateModel> {
+class Cifra extends State<CifraStateModel> {
   var html = "";
+  var linkTag = "";
+  var linkYouTube = "";
   var ctrl = WebViewController();
   final int index;
 
-  Navegador(this.index) {
-    html = constHTML.replaceAll("#TOM#", ddb.getTom(index)).replaceAll("#CIFRA#", ddb.getCifra(index));
-    String novoTom = ddb.getFavTom(index).isEmpty ? "" : "<script> go_to_tom('${ddb.getFavTom(index)}'); </script>";
-    html = Uri.dataFromString("$html} $novoTom", mimeType: 'text/html', encoding: utf8).toString();
+  Cifra(this.index) {
+    linkTag = ddb.getYt(index);
+    linkYouTube = "https://www.youtube.com/watch?v=$linkTag";
+
+    html = constHTML
+        .replaceAll("#TOM#", ddb.getTom(index))
+        .replaceAll("#CIFRA#", ddb.getCifra(index));
+
+    String novoTom = ddb.getFavTom(index).isEmpty
+        ? ""
+        : "<script> go_to_tom('${ddb.getFavTom(index)}'); </script>";
+    html = Uri.dataFromString("$html} $novoTom",
+            mimeType: 'text/html', encoding: utf8)
+        .toString();
   }
 
   void onClickButtonAddFavorite() {
@@ -49,13 +61,12 @@ class Navegador extends State<NavegadorStateModel> {
   Widget build(BuildContext context) {
     return Scaffold(
       floatingActionButton: SpeedDial(
+        //closeManually: true,
         animatedIcon: AnimatedIcons.menu_close,
         animatedIconTheme: const IconThemeData(size: 22.0),
         curve: Curves.bounceIn,
         overlayColor: Colors.black,
         overlayOpacity: 0.5,
-        tooltip: 'Speed Dial',
-        heroTag: 'speed-dial-hero-tag',
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 8.0,
@@ -74,7 +85,9 @@ class Navegador extends State<NavegadorStateModel> {
                 ctrl.runJavaScript("rep('-')");
               }),
           SpeedDialChild(
-            child: Icon(ddb.getFavTom(index).isNotEmpty ? Icons.favorite : Icons.bookmark_border),
+            child: Icon(ddb.getFavTom(index).isNotEmpty
+                ? Icons.favorite
+                : Icons.bookmark_border),
             backgroundColor: Colors.green,
             onTap: onClickButtonAddFavorite,
           ),
@@ -85,10 +98,14 @@ class Navegador extends State<NavegadorStateModel> {
                 ctrl.runJavaScript("letra()");
               }),
           SpeedDialChild(
-              child: const Icon(Icons.music_video),
-              backgroundColor: Colors.cyan,
+              child: const Icon(Icons.youtube_searched_for),
+              backgroundColor: Colors.red,
               onTap: () {
-                ctrl.runJavaScript("fyt('${ddb.getYt(index)}')");
+                if (linkTag.length < 4) {
+                  showAlertDialog(context, "Mensagem", "Video nao disponivel");
+                } else {
+                  launchURL(linkYouTube);
+                }
               }),
         ],
       ),
